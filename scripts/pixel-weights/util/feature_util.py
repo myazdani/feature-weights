@@ -129,7 +129,8 @@ class DimTransformer(BaseEstimator, TransformerMixin):
     resized_images = []
     for image_path in image_paths:
       im = cv2.imread(image_path)
-      resized_im = cv2.resize(im, (self.w, self.h))
+      im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
+      resized_im = cv2.resize(im, (self.w, self.h), interpolation = cv2.INTER_AREA)
       resized_images.append(resized_im)
     
     return resized_images
