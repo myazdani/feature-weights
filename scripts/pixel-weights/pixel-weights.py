@@ -17,17 +17,14 @@ img_paths = list(df.iloc[:,0])
 img_paths = ["../../data/images/imgs/" + img_path.split("data/")[-1] for img_path in img_paths]
 
 print 'data and features loaded'
+
+
 '''
-## Find querry img dim and rescale imgs
+## Rescale imgs
 '''
-sample_id = 2000
+width = 100
+height = 100
 
-img = cv2.imread(img_paths[sample_id])
-img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-
-width = 30
-height = 30
 DT = feat.DimTransformer(w = width, h = height)
 imgs = DT.transform(img_paths)
 
@@ -36,23 +33,16 @@ for i, img in enumerate(imgs):
     img_arrays[i,:] = reshape(img, (1,width*height*3))
 
 print 'images rescaled'
+
+
 '''
-# ## Compute Pairwise differences
+# ## Find pixel weights for randomly selected images
 '''
+
 def sample_diffs(sample, np_arr):
     diffs = np.sqrt((np_arr - sample)**2)
     return diffs
 
-indx_list = [range(0,sample_id), range(sample_id+1, img_arrays.shape[0])]
-indx = [item for sublist in indx_list for item in sublist]
-
-X_diffs = sample_diffs(img_arrays[sample_id,:], img_arrays[indx,:])
-y_diffs = sum(sample_diffs(CNNfeatures[sample_id,], CNNfeatures[indx,:]), axis=1)
-
-print 'distances computed'
-'''
-# ## Learn Optimal Weights
-'''
 def optimize_weights(X_diffs, y_diffs):
     sc = np.linalg.norm(X_diffs)
     A = X_diffs/sc
@@ -66,19 +56,36 @@ def optimize_weights(X_diffs, y_diffs):
     prob.solve(solver=cvx.SCS)
     return prob.status, w.value
 
-statusprob, weights = optimize_weights(X_diffs, y_diffs)
 
-print 'weights computed'
+random_samples = random_integers(0, len(img_paths)-1, 100)
 
-weights_thresh = np.array(weights).copy()
-weights_thresh[weights_thresh < 1e-4] = 0
-weights_thresh = 255.*weights_thresh/max(weights_thresh)
-weights_reshape = reshape(weights_thresh, (height, width, 3))
+for i, sample_id in enumerate(random_samples):
+    print 'working on sample', i
+    '''
+    # ## Compute Pairwise differences
+    '''
+    indx_list = [range(0,sample_id), range(sample_id+1, img_arrays.shape[0])]
+    indx = [item for sublist in indx_list for item in sublist]
+
+    X_diffs = sample_diffs(img_arrays[sample_id,:], img_arrays[indx,:])
+    y_diffs = sum(sample_diffs(CNNfeatures[sample_id,], CNNfeatures[indx,:]), axis=1)
+
+    '''
+    # ## Learn Optimal Weights
+    '''
+    statusprob, weights = optimize_weights(X_diffs, y_diffs)
 
 
-figure(figsize=(16, 10))
-subplot(2,2,1)
-imshow(imgs[sample_id])
-subplot(2,2,2)
-imshow(weights_reshape)
-savefig('foo.png', bbox_inches='tight')
+    weights_thresh = np.array(weights).copy()
+    weights_thresh[weights_thresh < 1e-4] = 0
+    weights_thresh = 255.*weights_thresh/max(weights_thresh)
+    weights_reshape = reshape(weights_thresh, (height, width, 3))
+
+
+    figure(figsize=(16, 10))
+    subplot(2,2,1)
+    imshow(imgs[sample_id])
+    subplot(2,2,2)
+    imshow(weights_reshape)
+    savefig('../../results/CUB_' + str(sample_id) + '.png', bbox_inches='tight')
+
