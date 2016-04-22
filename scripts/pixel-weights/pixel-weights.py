@@ -22,17 +22,23 @@ print 'data and features loaded'
 '''
 ## Rescale imgs
 '''
-width = 100
-height = 100
+width = 200
+height = 200
 
 DT = feat.DimTransformer(w = width, h = height)
 imgs = DT.transform(img_paths)
 
-img_arrays = zeros((len(imgs), width*height*3))
-for i, img in enumerate(imgs):
-    img_arrays[i,:] = reshape(img, (1,width*height*3))
+BW = feat.BWTransformer()
+imgs_bw = BW.transform(imgs)
+
+
+img_arrays = zeros((len(imgs), width*height))
+for i, img in enumerate(imgs_bw):
+    img_arrays[i,:] = reshape(img, (1,width*height))
 
 print 'images rescaled'
+
+
 
 
 '''
@@ -79,13 +85,14 @@ for i, sample_id in enumerate(random_samples):
     weights_thresh = np.array(weights).copy()
     weights_thresh[weights_thresh < 1e-4] = 0
     weights_thresh = 255.*weights_thresh/max(weights_thresh)
-    weights_reshape = reshape(weights_thresh, (height, width, 3))
+    #weights_reshape = reshape(weights_thresh, (height, width, 3))
+    weights_reshape = reshape(weights_thresh, (height, width))
 
 
     figure(figsize=(16, 10))
     subplot(2,2,1)
     imshow(imgs[sample_id])
     subplot(2,2,2)
-    imshow(weights_reshape)
+    imshow(weights_reshape, cmap='Greys_r')
     savefig('../../results/CUB_' + str(sample_id) + '.png', bbox_inches='tight')
 
